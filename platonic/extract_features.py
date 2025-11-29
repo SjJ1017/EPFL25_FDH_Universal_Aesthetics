@@ -94,7 +94,7 @@ def extract_llm_features(filenames, dataset, args):
                 else:
                     raise NotImplementedError(f"unknown pooling {args.pool}")
                 llm_feats.append(feats.cpu())
-        print(f"average loss:\t{torch.stack(losses).mean().item()}")
+        # print(f"average loss:\t{torch.stack(losses).mean().item()}")
         save_dict = {
             "feats": torch.cat(llm_feats).cpu(),
             "num_params": llm_param_count,
