@@ -73,11 +73,11 @@ def extract_llm_features(filenames, dataset, args):
                         attention_mask=token_inputs["attention_mask"],
                     )
 
-                loss, avg_loss = utils.cross_entropy_loss(token_inputs, llm_output)
-                losses.extend(avg_loss.cpu())
+                # loss, avg_loss = utils.cross_entropy_loss(token_inputs, llm_output)
+                # losses.extend(avg_loss.cpu())
                 
-                bpb = utils.cross_entropy_to_bits_per_unit(loss.cpu(), texts[i:i+args.batch_size], unit="byte")
-                bpb_losses.extend(bpb)
+                # bpb = utils.cross_entropy_to_bits_per_unit(loss.cpu(), texts[i:i+args.batch_size], unit="byte")
+                # bpb_losses.extend(bpb)
                 
                 # make sure to do all the processing in cpu to avoid memory problems
                 if args.pool == 'avg':
@@ -96,8 +96,8 @@ def extract_llm_features(filenames, dataset, args):
             "feats": torch.cat(llm_feats).cpu(),
             "num_params": llm_param_count,
             "mask": tokens["attention_mask"].cpu(),
-            "loss": torch.stack(losses).mean(),
-            "bpb": torch.stack(bpb_losses).mean(),
+            # "loss": torch.stack(losses).mean(),
+            # "bpb": torch.stack(bpb_losses).mean(),
         }
 
         torch.save(save_dict, save_path)
