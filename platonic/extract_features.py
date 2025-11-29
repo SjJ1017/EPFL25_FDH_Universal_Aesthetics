@@ -197,7 +197,7 @@ if __name__ == "__main__":
     
     # load dataset once outside    
     # dataset = load_dataset(args.dataset, revision=args.subset, split='train')
-    dataset = load_dataset(args.dataset, split='train')
+    dataset = load_dataset(args.dataset, split='train', revision=args.subset)
 
     if args.modality in ["all", "language"]:
         # extract all language model features
