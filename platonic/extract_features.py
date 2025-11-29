@@ -83,14 +83,17 @@ def extract_llm_features(filenames, dataset, args):
                 if args.pool == 'avg':
                     feats = torch.stack(llm_output["hidden_states"]).permute(1, 0, 2, 3)
                     mask = token_inputs["attention_mask"].unsqueeze(-1).unsqueeze(1)
+                    del llm_output
+                    torch.cuda.empty_cache()
                     feats = (feats * mask).sum(2) / mask.sum(2)
                 elif args.pool == 'last':
                     feats = [v[:, -1, :] for v in llm_output["hidden_states"]]
+                    del llm_output
+                    torch.cuda.empty_cache()
                     feats = torch.stack(feats).permute(1, 0, 2) 
                 else:
                     raise NotImplementedError(f"unknown pooling {args.pool}")
                 llm_feats.append(feats.cpu())
-
         print(f"average loss:\t{torch.stack(losses).mean().item()}")
         save_dict = {
             "feats": torch.cat(llm_feats).cpu(),
