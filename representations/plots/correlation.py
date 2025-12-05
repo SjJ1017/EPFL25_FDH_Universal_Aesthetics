@@ -5,11 +5,6 @@ from matplotlib.patches import Circle
 import matplotlib.colors as mcolors
 
 
-
-
-
-
-
 def scatter(single_model_alignment, lens):
     plt.scatter(lens, single_model_alignment)
 

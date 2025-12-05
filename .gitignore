@@ -1,2 +1,9 @@
 platonic/features/
 platonic/results/
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# macOS specific files
+.DS_Store
