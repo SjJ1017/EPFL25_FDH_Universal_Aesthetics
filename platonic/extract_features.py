@@ -105,7 +105,7 @@ def extract_llm_features(filenames, dataset, args):
 
         torch.save(save_dict, save_path)
 
-        del language_model, tokenizer, llm_feats, llm_output
+        del language_model, tokenizer, llm_feats
         torch.cuda.empty_cache()
         torch.cuda.ipc_collect()
         gc.collect()

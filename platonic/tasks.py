@@ -56,15 +56,7 @@ def get_models(modelset, modality='all'):
         lvm_models = []
     elif modelset == 'local_test':
         llm_models = [
-            "meta-llama/Llama-2-7b-chat-hf",
-            "mistralai/Mistral-7B-Instruct-v0.2"
-            "allenai/OLMo-1B-hf",
-            "allenai/OLMo-7B-hf", 
-            "google/gemma-2b",
-            "google/gemma-7b",
-            "mistralai/Mistral-7B-v0.1",
-            "mistralai/Mixtral-8x7B-v0.1",
-            "NousResearch/Meta-Llama-3-8B",
+            "bigscience/bloomz-560m",
         ]
         
         lvm_models = []
