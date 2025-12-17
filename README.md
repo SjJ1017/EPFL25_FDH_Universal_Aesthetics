@@ -22,7 +22,7 @@ A research project investigating representational convergence in Large Language 
 
 ## Overview
 
-This project investigates the concept of **"Universal Aesthetics"** within the context of Artificial Intelligence models, specifically Large Language Models (LLMs) and Vision Transformers (ViTs). Our central hypothesis is inspired by Tolstoy's famous opening line: *"All happy families are alike; each unhappy family is unhappy in its own way"* [1] — but applied to AI representations. 
+This project investigates the concept of **"Universal Aesthetics"** within the context of Artificial Intelligence models, specifically Large Language Models (LLMs) and Vision Transformers (ViTs). Our central hypothesis is inspired by Tolstoy's famous opening line: *"All happy families are alike; each unhappy family is unhappy in its own way" — but applied to AI representations. 
 
 ### Key Findings
 
@@ -89,7 +89,7 @@ All analysis and visualization code:
 
 - Python 3.8+
 - CUDA-compatible GPU (recommended for model inference)
-- 20GB+ free disk space for features
+- 6GB+ free disk space for features
 
 ### Setup
 
@@ -127,7 +127,7 @@ Our project uses the following datasets (available on HuggingFace):
 
 All extracted features (~5.7GB) are available for download:
 
-**Google Drive**: `https://drive.google.com/`
+**Google Drive**: `https://drive.google.com/drive/folders/1vB3KCPKarg2pindNvrX6wXs_rq0IOT9D?usp=sharing`
 
 Features include:
 - LLM embeddings for 7 language models using `pool-avg`
