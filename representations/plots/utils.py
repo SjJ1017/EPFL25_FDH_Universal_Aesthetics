@@ -58,7 +58,7 @@ def str_to_matrix(matrix_str: str, symmetric: bool) -> np.ndarray:
     return result
 
 
-def read_records(file_path: str) -> list[str]:
+def read_records(file_path: str, force_symmetry: bool) -> list[str]:
     """
     Read lines from a text file.
 
@@ -103,7 +103,7 @@ def read_records(file_path: str) -> list[str]:
 
     matrices = {}
     for name in matrices_str:
-        matrices[name] = str_to_matrix(matrices_str[name], symmetric=True)
+        matrices[name] = str_to_matrix(matrices_str[name], symmetric=force_symmetry)
 
     return matrices
 
@@ -154,6 +154,75 @@ def plot_heatmap(matrix1, matrix2, left_name = "Left", right_name = "Right", cen
     if save_path is not None:
         plt.savefig(save_path, dpi=300)
     print(f"{save_path} saved")
+
+
+def plot_single_heatmap(matrix, llm_models=None, lvm_models=None, save_path=None, title="Alignment Heatmap"):
+    """
+    Plot a single heatmap for a non-symmetric matrix with custom model names.
+    
+    Args:
+        matrix: NumPy array representing the alignment scores (non-symmetric)
+        llm_models: List of language model names for y-axis (rows)
+        lvm_models: List of vision model names for x-axis (columns), with \n for line breaks
+        save_path: Path to save the figure
+        title: Title of the heatmap
+    """
+    if isinstance(matrix, str):
+        matrix = str_to_matrix(matrix, symmetric=False)
+    
+    # Default model names if not provided
+    if llm_models is None:
+        llm_models = ['Meta-Llama-3-8B', 'Mistral-7B-v0.1', 'Gemma-7b', 
+                      'Gemma-2b', 'Bloomz-1b7', 'OLMo-1B-hf', 'Bloomz-560m']
+    
+    if lvm_models is None:
+        lvm_models = [
+            "vit_tiny_patch16\n_224.augreg_in21k",
+            "vit_small_patch16\n_224.augreg_in21k",
+            "vit_base_patch16\n_224.mae",
+            "vit_base_patch14\n_dinov2.lvd142m",
+            "vit_large_patch14\n_dinov2.lvd142m",
+            "vit_large_patch14\n_clip_224.laion2b",
+            "vit_huge_patch14\n_clip_224.laion2b_ft_in12k",
+        ]
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Plot heatmap with yellow-blue colormap
+    # YlGnBu: Yellow (low) -> Green -> Blue (high)
+    sns.heatmap(
+        matrix, 
+        annot=True,  # Show values in cells
+        fmt='.3f',   # Format to 3 decimal places
+        cmap="YlGnBu",  # Yellow (low values) -> Blue (high values)
+        square=False,  # Not square since matrix is not symmetric
+        ax=ax,
+        cbar_kws={'label': 'Alignment Score'},
+        xticklabels=lvm_models,
+        yticklabels=llm_models
+    )
+    
+    # Set title
+    ax.set_title(title, fontsize=16, pad=20)
+    
+    # Rotate x-axis labels by 45 degrees to avoid overlap
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, ha='right', fontsize=10)
+    
+    # Set y-axis labels
+    ax.set_yticklabels(ax.get_yticklabels(), rotation=0, fontsize=11)
+    
+    # Set axis labels
+    ax.set_xlabel('Vision Models', fontsize=12, labelpad=10)
+    ax.set_ylabel('Language Models', fontsize=12, labelpad=10)
+    
+    plt.tight_layout()
+    
+    if save_path is not None:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"{save_path} saved")
+    
+    plt.show()
 
 
 def plot_alignments(alignment_scores_1, alignment_scores_2, label_1="Poems", label_2="Text", xlim=(0, 15), ylim=(0.45, 0.75), save_path=None):

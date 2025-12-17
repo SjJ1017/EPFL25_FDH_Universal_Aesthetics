@@ -104,6 +104,7 @@ def compute_alignment(x_loaders, y_loaders, metric, topk, precise=True, output_d
 
 class FeaturesLoader:
     DATASET_NAME = "SHENJJ1017/poem_aesthetic_eval"
+    DATASET_NAME = 'SHENJJ1017/Image-Text'
     REVISION = "main"
     # REVISION = "aligned_s"
     DATASET = datasets.load_dataset(DATASET_NAME, revision=REVISION, split='train')
@@ -169,7 +170,7 @@ def get_filter_pair_function(filter_name: str):
 if __name__ == "__main__":
 
 
-    text_type = "features/poems"
+    text_type = "features/image-texts"
     loaders_poemes = [
         FeaturesLoader(f"../platonic/{text_type}/NousResearch_Meta-Llama-3-8B_pool-avg.pt"),
         FeaturesLoader(f"../platonic/{text_type}/mistralai_Mistral-7B-v0.1_pool-avg.pt"),
@@ -190,11 +191,31 @@ if __name__ == "__main__":
         FeaturesLoader(f"../platonic/{text_type}/allenai_OLMo-1B-hf_pool-avg.pt"),
         FeaturesLoader(f"../platonic/{text_type}/bigscience_bloomz-560m_pool-avg.pt"),
     ]
+
+    image_loaders = [
+        FeaturesLoader(f"../platonic/features/images/vit_huge_patch14_clip_224.laion2b_ft_in12k_pool-cls.pt"),
+        FeaturesLoader(f"../platonic/features/images/vit_large_patch14_clip_224.laion2b_pool-cls.pt"),
+        FeaturesLoader(f"../platonic/features/images/vit_large_patch14_dinov2.lvd142m_pool-cls.pt"),
+        FeaturesLoader(f"../platonic/features/images/vit_base_patch16_224.mae_pool-cls.pt"),
+        FeaturesLoader(f"../platonic/features/images/vit_base_patch14_dinov2.lvd142m_pool-cls.pt"),
+        FeaturesLoader(f"../platonic/features/images/vit_small_patch16_224.augreg_in21k_pool-cls.pt"),
+        FeaturesLoader(f"../platonic/features/images/vit_tiny_patch16_224.augreg_in21k_pool-cls.pt"),
+    ]
     
     poems = datasets.load_dataset('SHENJJ1017/poem_aesthetic_eval', revision="main", split='train')
     texts = datasets.load_dataset('minhuh/prh', revision="wit_1024")
     cut_len = min(len(poems), len(texts)) # ensure fair comparison
+    cut_len = 993
 
+    alignment_scores, alignment_indices = compute_alignment(loaders_poemes, image_loaders, "mutual_knn_raw", 10, False, dataset=False, cut_len=cut_len, x_shape=cut_len)
+    # save npy arrays
+    np.save("texts_images_raw_mutual_knn_scores.npy", alignment_scores)
+    
+    # N * 7 * 7 -> 7 * 7 by mean
+    mean_scores = np.mean(alignment_scores, axis=0)
+    print("Mean scores between text features and image features:")
+    print(mean_scores)
+    raise ValueError("Stop here")
     # Poem alignment 
     alignment_scores, alignment_indices = compute_alignment(loaders_poemes, loaders_poemes, "mutual_knn", 10, False, dataset=True, cut_len=cut_len)
 

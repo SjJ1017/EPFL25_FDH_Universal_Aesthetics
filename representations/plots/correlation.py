@@ -1,3 +1,5 @@
+from matplotlib.colorbar import ColorbarBase
+from matplotlib.ticker import FixedLocator
 import numpy as np
 from datasets import load_dataset
 import matplotlib.pyplot as plt
@@ -233,6 +235,213 @@ def plot_alignment_grid_custom(lens, scores_matrix, model_names, model_params_B)
 
     plt.savefig("alignment_grid_ppl.png", dpi=125)
 
+
+def plot_alignment_grid_asym(lens, scores_matrix, model_names, model_names2, model_params_B):
+    num_models = len(model_names)
+    fig, axes = plt.subplots(num_models, num_models, figsize=(20, 20), squeeze=False)
+    plt.subplots_adjust(wspace=0.1, hspace=0.1)
+
+    # Calculate appropriate y-limits based on data
+    all_scores = []
+    for i in range(num_models):
+        for j in range(num_models):
+            current_scores = scores_matrix[:, i, j].copy()
+            current_scores = np.array([
+                float(x) if np.isscalar(x) else float(np.mean(x))
+                for x in current_scores
+            ])
+            all_scores.extend(current_scores)
+    
+    y_min = np.percentile(all_scores, 1)  # 1st percentile
+    y_max = np.percentile(all_scores, 99)  # 99th percentile
+    y_margin = (y_max - y_min) * 0.1
+    y_min -= y_margin
+    y_max += y_margin
+    
+    # Set universal limits for all plots
+    for ax_row in axes:
+        for ax in ax_row:
+            ax.set_ylim(y_min, y_max)
+            ax.set_xlim(1.5, 5.5)
+
+    # Scale parameters for radius visualization
+    max_param = max(model_params_B)
+    radii = [ (p / max_param) * 0.3 + 0.1 for p in model_params_B] 
+
+    # First pass: calculate all slopes for normalization
+    slopes = np.zeros((num_models, num_models))
+    for i in range(num_models):
+        for j in range(num_models):
+            current_scores = scores_matrix[:, i, j].copy()
+            current_scores = np.array([
+                float(x) if np.isscalar(x) else float(np.mean(x))
+                for x in current_scores
+            ])
+            m, b = np.polyfit(lens, current_scores, 1)
+            slopes[i, j] = m
+    
+    # Normalize slopes: positive slopes -> warm colors (yellow), negative -> cool colors (purple)
+    # Split normalization for positive and negative slopes
+    slope_min = slopes.min()
+    slope_max = slopes.max()
+    slope_abs_max = max(abs(slope_min), abs(slope_max))
+    slopes_normalized = slopes / slope_abs_max  # Range: [-1, 1]
+    
+    for i in range(num_models): # rows (y-axis label index)
+        for j in range(num_models): # columns (x-axis label index)
+            ax = axes[i, j]
+            
+            # Get scores for this pair (model i vs model j)
+            current_scores = scores_matrix[:, i, j].copy()
+            current_scores = np.array([
+                float(x) if np.isscalar(x) else float(np.mean(x))
+                for x in current_scores
+            ])
+            noise = np.random.normal(0, 0.05, current_scores.shape)
+            current_scores += noise
+            
+            # Get normalized slope for color mapping
+            slope_norm = slopes_normalized[i, j]
+            
+            # Map slope to color: yellow for negative, purple for positive
+            # Use a custom colormap: yellow (negative) -> white (0) -> purple (positive)
+            if slope_norm < 0:
+                # Negative slope: map to yellow/orange shades
+                intensity = abs(slope_norm)
+                # Background: light yellow
+                bg_color = (1.0 - intensity * 0.05, 0.95 - intensity * 0.2, 0.7 - intensity * 0.5)
+                # Box: darker yellow/orange
+                box_color = (1.0 - intensity * 0.1, 0.8 - intensity * 0.3, 0.3 - intensity * 0.2)
+                median_color = (0.9 - intensity * 0.2, 0.6 - intensity * 0.3, 0.1)
+            else:
+                # Positive slope: map to purple shades
+                intensity = slope_norm
+                # Background: light purple
+                bg_color = (0.9 - intensity * 0.3, 0.85 - intensity * 0.35, 1.0 - intensity * 0.2)
+                # Box: darker purple
+                box_color = (0.6 - intensity * 0.3, 0.4 - intensity * 0.2, 0.9 - intensity * 0.1)
+                median_color = (0.4 - intensity * 0.2, 0.2 - intensity * 0.1, 0.8)
+            
+            # Set background color
+            ax.set_facecolor(bg_color)
+
+            # Lower triangle (i >= j): Quantile box plot for discrete values
+            if True:
+                unique_lens = np.unique(lens)
+                bin_data = []
+                for val in unique_lens:
+                    mask = lens == val
+                    bin_scores = current_scores[mask]
+                    if len(bin_scores) == 0:
+                        bin_scores = [np.nan]
+                    bin_data.append(bin_scores)
+                
+                box = ax.boxplot(
+                    bin_data,
+                    positions=unique_lens,
+                    widths=0.6,
+                    patch_artist=True,
+                    manage_ticks=False,
+                    showfliers=False
+                )
+                # Use the calculated box_color for boxes
+                for patch in box['boxes']: 
+                    patch.set_facecolor(box_color)
+                    patch.set_alpha(0.8)
+                for item in ['whiskers', 'caps', 'medians']:
+                    for line in box[item]: 
+                        line.set_color(box_color if item != 'medians' else median_color)
+                        line.set_linewidth(1.5 if item == 'medians' else 1.0)
+                
+                # Add fit line
+                m = slopes[i, j]
+                b = np.mean(current_scores) - m * np.mean(lens)
+                x_range = np.linspace(lens.min(), lens.max(), 100)
+                ax.plot(x_range, m * x_range + b, color=median_color, linestyle='--', linewidth=2, alpha=0.7)
+                
+                ax.scatter(lens, current_scores, alpha=0.15, color=box_color, s=5)
+                ax.set_xticks(unique_lens)
+                # Auto-generate y-ticks based on data range
+                y_ticks = np.linspace(y_min, y_max, 5)
+                ax.set_yticks(y_ticks)
+                # Show tick labels
+                if j == 0:
+                    ax.set_yticklabels([f'{y:.2f}' for y in y_ticks], fontsize=9)
+                else:
+                    ax.set_yticklabels([])
+                if i == num_models - 1:
+                    ax.set_xticklabels([str(int(v)) for v in unique_lens], fontsize=9)
+                else:
+                    ax.set_xticklabels([])
+
+            # Upper triangle (i < j): Scatter plot with fit line and slope text
+            elif False:
+                ax.scatter(lens, current_scores, alpha=0.3, color=box_color, s=5)
+                m = slopes[i, j]
+                b = np.mean(current_scores) - m * np.mean(lens)
+                x_range = np.linspace(lens.min(), lens.max(), 100)
+                ax.plot(x_range, m*x_range + b, color=median_color, linestyle='--', linewidth=2, alpha=0.7)
+
+                # Display the slope 'm' in the lower right corner in 10e-4 format
+                slope_text = f"{m * 10000:.2f}"
+                ax.text(0.98, 0.02, slope_text, ha='right', va='bottom', fontsize=30, color=median_color, transform=ax.transAxes)
+                unique_lens = np.unique(lens)
+                ax.set_xticks(unique_lens)
+                y_ticks = np.linspace(y_min, y_max, 5)
+                ax.set_yticks(y_ticks)
+                # Show tick labels
+                if j == 0:
+                    ax.set_yticklabels([f'{y:.2f}' for y in y_ticks], fontsize=9)
+                else:
+                    ax.set_yticklabels([])
+                if i == num_models - 1:
+                    ax.set_xticklabels([str(int(v)) for v in unique_lens], fontsize=9)
+                else:
+                    ax.set_xticklabels([])
+
+            # Set Y-labels for the first column
+            if j == 0:
+                ax.set_ylabel(model_names[i], fontsize=20, rotation=90, va='center', ha='center', labelpad=10)
+            
+            # Set X-labels (model_names2) for the top row
+            if i == 0:
+                ax.set_title(model_names2[j], fontsize=20, pad=10, rotation=45, ha='left')
+            
+            # Set X-labels for the bottom row
+            if i == num_models - 1:
+                ax.set_xlabel("Image Aesthetic Score", fontsize=10)
+
+    # Add colorbar legend for slope values
+    from matplotlib.patches import Rectangle
+    from matplotlib.colorbar import ColorbarBase
+    from matplotlib.colors import Normalize
+    import matplotlib.cm as cm
+    
+    # Create a custom colorbar axis on the right side
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])  # [left, bottom, width, height]
+    
+    # Create custom colormap: yellow -> white -> purple (reversed)
+    from matplotlib.colors import LinearSegmentedColormap
+    colors_list = [
+        (0.9, 0.6, 0.1),   # Deep orange/yellow (negative)
+        (1.0, 0.9, 0.5),   # Light yellow
+        (0.95, 0.95, 0.95), # Near white (zero)
+        (0.7, 0.6, 0.95),  # Light purple
+        (0.4, 0.2, 0.8)    # Deep purple (positive)
+    ]
+    n_bins = 100
+    cmap_custom = LinearSegmentedColormap.from_list('yellow_purple', colors_list, N=n_bins)
+    
+    # Normalize to slope range
+    norm = Normalize(vmin=slope_min, vmax=slope_max)
+    cb = ColorbarBase(cbar_ax, cmap=cmap_custom, norm=norm, orientation='vertical')
+    cb.set_label('Slope (Alignment Score / Image Aesthetic Score)', fontsize=12, labelpad=15)
+    
+    
+    plt.subplots_adjust(bottom=0.08, right=0.90)
+    plt.savefig("alignment_grid_score_poems.png", dpi=125, bbox_inches='tight')
+
+
 if __name__ == "__main__":
     # load dataset and alignment scores
     dataset = load_dataset('SHENJJ1017/poem_aesthetic_eval', split='train', revision='main')
@@ -252,11 +461,31 @@ if __name__ == "__main__":
     valid_mask = perplexities != float('inf')
     valid_ppls = perplexities[valid_mask]
     scores_filtered_ppls = alignment_scores[valid_mask]
+    model_params_B = [8.0, 7.0, 7.0, 2.0, 1.7, 1.0, 0.560]
+    plot_alignment_grid_custom(lens_filtered, scores_filtered, model_params_B)
 
+    """result_array_path = "../results/alignment/poems_images_raw_mutual_knn_scores.npy"
+    dataset = load_dataset('SHENJJ1017/Image-Text', split='train', revision='main')
+    scores = np.array([int(d['score']) for d in dataset])
+    # print(scores)
+    valid_ppls = scores
+    alignment_scores = np.load(result_array_path, allow_pickle=True)
+    scores_filtered_ppls = alignment_scores
 
     model_names = ['Meta-Llama-3-8B', 'Mistral-7B-v0.1', 'Gemma-7b', 'Gemma-2b', 'Bloomz-1b7', 'OLMo-1B-hf', 'Bloomz-560m']
-    num_models = len(model_names)
-    model_params_B = [8.0, 7.0, 7.0, 2.0, 1.7, 1.0, 0.560]
+    lvm_models = [
+            "vit_tiny_patch16\n_224.augreg_in21k",
+            "vit_small_patch16\n_224.augreg_in21k",
+            "vit_base_patch16\n_224.mae",
+            "vit_base_patch14\n_dinov2.lvd142m",
+            "vit_large_patch14\n_dinov2.lvd142m",
+            "vit_large_patch14\n_clip_224.laion2b",
+            "vit_huge_patch14\n_clip_224.laion2b_ft_in12k",
+        ]
+    lvm_models.reverse()
 
-    #plot_alignment_grid_custom(lens_filtered, scores_filtered, model_names, model_params_B)
-    plot_alignment_grid_custom(valid_ppls, scores_filtered_ppls, model_names, model_params_B)
+    num_models = len(model_names)
+
+
+
+    plot_alignment_grid_asym(valid_ppls, scores_filtered_ppls, model_names, lvm_models, model_params_B)"""
