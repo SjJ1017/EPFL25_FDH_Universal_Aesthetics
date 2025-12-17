@@ -48,10 +48,11 @@ This study validates the **Platonic Representation Hypothesis** on aesthetic dat
 │   ├── plots/          # Plotting utilities
 │   │   ├── correlation.py
 │   │   └── utils.py
+|   ├── results/        # Generated alignment scores and figures
 │   ├── perplexity.py   # Perplexity calculations
 │   ├── semantic.py     # Semantic encoding
 │   └── ...
-├── results/            # Generated alignment scores and figures
+├── results/            
 └── README.md
 ```
 
